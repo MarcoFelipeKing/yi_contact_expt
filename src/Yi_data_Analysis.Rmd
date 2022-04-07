@@ -1,0 +1,123 @@
+---
+title: "Transfer Efficiency"
+author: "MFK"
+date: "25/08/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r setup}
+pacman::p_load(dplyr,brms,tidyr,ggplot2)
+
+```
+
+## Kalanne's sequential transfer data
+
+You can also embed plots, for example:
+
+```{r,echo = FALSE}
+
+df<-vroom::vroom("Downloads/ExperimentalData.txt",delim = "\t")
+skimr::skim(df)
+```
+
+
+
+## Model
+
+```{r}
+model_fit<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant),family = lognormal(link = "identity", link_sigma = "log"))
+summary(model_fit)
+
+model_fit_g<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant))
+summary(model_fit_g)
+plot(model_fit, variable = c("NumberContacts"))
+```
+
+
+
+## Fluorescent powder
+
+```{r}
+dY<-vroom::vroom("Downloads/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
+
+skimr::skim(dY)
+require(ggplot2)
+
+
+# Individual powder area vs contact number and loading weight 
+dY %>% 
+  filter(surface=="Plastic" ) %>% 
+  filter(id<20) %>% 
+  ggplot()+
+  geom_point(aes(x=contact_number,y=powder_area,colour=gloves,size=loading_weight))+
+  facet_wrap(~id,scales="free")->a
+  
+dY %>% 
+  # filter(surface=="Plastic" ) %>% 
+  # group_by(surface,contact_number,gloves) %>% 
+  # summarise(Mean=mean(powder_area),SD=sd(powder_area))
+  ggplot()+
+  geom_violin(aes(x=as.factor(contact_number),y=raw_int_d,colour=gloves),draw_quantiles = c(0.25,0.5,0.95))+
+  scale_y_continuous(trans = "log10")+
+  facet_wrap(~surface,scales="free")
+
+```
+
+
+
+
+
+
+
+
+```{r}
+model_fit_g<-brms::brm(data = dY,powder_area~1+contact_number+gloves+ (1|id),
+                       family = lognormal(link = "identity", link_sigma = "log"),
+                       prior = prior(lognormal(0.5,0.1),class="b") )
+summary(model_fit_g)
+plot(model_fit_g)
+```
+
+
+
+
+
+## Linear regression 
+
+Regressing airborne concentration on 
+
+```{r}
+w<-read.table(pipe("pbpaste"), sep="\t", header=TRUE) %>% janitor::clean_names() %>% 
+  drop_na()
+skimr::skim(w)
+
+
+w_fit<-brm(data=w,log10(cia_cfu_m3)~1+ach+as.factor(exp)+(1|exp))
+summary(w_fit)
+plot(w_fit)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
