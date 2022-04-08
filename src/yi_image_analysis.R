@@ -1,6 +1,6 @@
 
 # Intro -------------------------------------------------------------------
-# This is an algorithm for extracting the mass value from Yi's scales
+# This is an algorithm for extracting the numerical mass value from Yi's scales
 
 # Packages ----------------------------------------------------------------
 
@@ -27,5 +27,4 @@ frames(im, index, drop = FALSE)
 #https://docs.ropensci.org/tesseract/articles/intro.html#preprocessing-with-magick-1
 im<-magick::image_convert(image = "~/Desktop/NdHYc.jpg",format = "jpg")
 text <- tesseract::ocr(image="~/Desktop/NdHYc.jpg")
-tesseract::
-tesseract_params('colour')
+tesseract::tesseract_params('colour')
