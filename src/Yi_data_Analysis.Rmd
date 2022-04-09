@@ -1,5 +1,5 @@
 ---
-title: "Transfer Efficiency"
+title: "Yi Lui Data Analysis: Transfer Efficiency"
 author: "MFK"
 date: "25/08/2021"
 output: html_document
@@ -46,12 +46,12 @@ plot(model_fit, variable = c("NumberContacts"))
 
 
 ## Fluorescent powder
+This imports Yi lui's data 
 
-```{r}
-dY<-vroom::vroom("Downloads/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
+```{r Yi's data import}
+dY<-vroom::vroom("data/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
 
 skimr::skim(dY)
-require(ggplot2)
 
 
 # Individual powder area vs contact number and loading weight 
@@ -60,7 +60,8 @@ dY %>%
   filter(id<20) %>% 
   ggplot()+
   geom_point(aes(x=contact_number,y=powder_area,colour=gloves,size=loading_weight))+
-  facet_wrap(~id,scales="free")->a
+  facet_wrap(~id,scales="free")+
+  hrbrthemes::theme_ipsum()
   
 dY %>% 
   # filter(surface=="Plastic" ) %>% 
@@ -73,40 +74,41 @@ dY %>%
 
 ```
 
+# Some investigative plots
+```{r investigative plots}
+#Plot log10(raw_int_d) vs contact_number for each ID and colour by gloves
+dY%>%
+filter(surface=="Plastic" ) %>%
+ggplot()+
+geom_point(aes(x=contact_number,y=raw_int_d,colour=gloves))+
+scale_colour_brewer(palette="Set1")+
+scale_y_continuous(trans="log10")+
+facet_wrap(~id)+
+xlab("Contact number")+
+ylab("Intensity")+
+theme_linedraw()->a
+
+#save ggplot figure
+# ggsave(a,"images/intensity_for_each_ID.png",device="png",units=c("cm"),width=30)
+ggsave(a,filename = "images/intensity_for_each_ID_plastic.png",dpi=300, device="png",width = 60, height = 60, units = "cm")
+
+
+```
 
 
 
+# BRMS model fit
+Here we fit a Bayesian Regression Model using BRMS to the data.
 
-
-
-
-```{r}
-model_fit_g<-brms::brm(data = dY,powder_area~1+contact_number+gloves+ (1|id),
-                       family = lognormal(link = "identity", link_sigma = "log"),
-                       prior = prior(lognormal(0.5,0.1),class="b") )
+```{r BRM raw_int_d }
+#Here we fit a BRM model from BRSM to the data, with raw_ind_d as the dependent variable
+#We 
+model_fit_g<-brms::brm(data = dY,raw_int_d~powder_area+contact_number+gloves+surface+(powder_area+contact_number+gloves+surface|id),
+                       family = lognormal(link = "identity", link_sigma = "log"))
 summary(model_fit_g)
 plot(model_fit_g)
+
 ```
-
-
-
-
-
-## Linear regression 
-
-Regressing airborne concentration on 
-
-```{r}
-w<-read.table(pipe("pbpaste"), sep="\t", header=TRUE) %>% janitor::clean_names() %>% 
-  drop_na()
-skimr::skim(w)
-
-
-w_fit<-brm(data=w,log10(cia_cfu_m3)~1+ach+as.factor(exp)+(1|exp))
-summary(w_fit)
-plot(w_fit)
-```
-
 
 
 
