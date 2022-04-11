@@ -20,30 +20,6 @@ pacman::p_load(dplyr,brms,tidyr,ggplot2)
 
 ```
 
-## Kalanne's sequential transfer data
-
-You can also embed plots, for example:
-
-```{r,echo = FALSE}
-
-df<-vroom::vroom("Downloads/ExperimentalData.txt",delim = "\t")
-skimr::skim(df)
-```
-
-
-
-## Model
-
-```{r}
-model_fit<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant),family = lognormal(link = "identity", link_sigma = "log"))
-summary(model_fit)
-
-model_fit_g<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant))
-summary(model_fit_g)
-plot(model_fit, variable = c("NumberContacts"))
-```
-
-
 
 ## Fluorescent powder
 This imports Yi lui's data 
@@ -78,19 +54,42 @@ dY %>%
 ```{r investigative plots}
 #Plot log10(raw_int_d) vs contact_number for each ID and colour by gloves
 dY%>%
-filter(surface=="Plastic" ) %>%
+filter(surface=="Plastic") %>%
+filter(id>20 & id<=40) %>%
 ggplot()+
-geom_point(aes(x=contact_number,y=raw_int_d,colour=gloves))+
+geom_point(aes(x=contact_number,y=raw_int_d,colour=gloves),size=4)+
 scale_colour_brewer(palette="Set1")+
 scale_y_continuous(trans="log10")+
 facet_wrap(~id)+
 xlab("Contact number")+
-ylab("Intensity")+
-theme_linedraw()->a
+ylab("Intensity units")+
+theme_bw()+
+labs(color='Gloves')+
+theme(text = element_text(size=14),axis.text.x=element_text(size=14))  ->a
 
 #save ggplot figure
 # ggsave(a,"images/intensity_for_each_ID.png",device="png",units=c("cm"),width=30)
-ggsave(a,filename = "images/intensity_for_each_ID_plastic.png",dpi=300, device="png",width = 60, height = 60, units = "cm")
+ggsave(a,filename = "images/intensity_for_each_ID_plastic_21_40.png",dpi=300, device="png",width = 10, height = 10, units = "in")
+
+
+# Create a scatter plot of the intensity for each ID and colour by gloves, facet by surface
+
+dY%>%
+ggplot()+
+geom_jitter(aes(x=contact_number,y=raw_int_d/powder_area,colour=date),size=4,alpha=0.4)+
+scale_colour_brewer(palette="Set1")+
+# geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
+facet_grid(gloves~surface)+
+xlab("Contact number")+
+ylab("Intensity units")+
+scale_y_continuous(trans = "log10")+
+theme_bw()+
+labs(color='Date')+
+theme(text = element_text(size=14),axis.text.x=element_text(size=14))  ->a
+
+ggsave(a,filename = "images/aggregated_intensity.png",dpi=300, device="png",width = 12, height = 10, units = "in")
+
+
 
 
 ```
@@ -122,4 +121,27 @@ plot(model_fit_g)
 
 
 
+
+## Kalanne's sequential transfer data
+
+You can also embed plots, for example:
+
+```{r,echo = FALSE}
+
+df<-vroom::vroom("Downloads/ExperimentalData.txt",delim = "\t")
+skimr::skim(df)
+```
+
+
+
+## Model
+
+```{r}
+model_fit<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant),family = lognormal(link = "identity", link_sigma = "log"))
+summary(model_fit)
+
+model_fit_g<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant))
+summary(model_fit_g)
+plot(model_fit, variable = c("NumberContacts"))
+```
 
