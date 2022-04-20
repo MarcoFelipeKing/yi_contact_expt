@@ -38,15 +38,21 @@ dY %>%
   geom_point(aes(x=contact_number,y=powder_area,colour=gloves,size=loading_weight))+
   facet_wrap(~id,scales="free")+
   hrbrthemes::theme_ipsum()
-  
+
+# Raw int violin plots faceted by surface
 dY %>% 
   # filter(surface=="Plastic" ) %>% 
   # group_by(surface,contact_number,gloves) %>% 
   # summarise(Mean=mean(powder_area),SD=sd(powder_area))
   ggplot()+
-  geom_violin(aes(x=as.factor(contact_number),y=raw_int_d,colour=gloves),draw_quantiles = c(0.25,0.5,0.95))+
+  geom_violin(aes(x=as.factor(contact_number),y=raw_int_d,fill=gloves),draw_quantiles = c(0.25,0.5,0.95))+
   scale_y_continuous(trans = "log10")+
-  facet_wrap(~surface,scales="free")
+  scale_fill_brewer(palette = "Set1")+
+  facet_wrap(~surface,scales="free",nrow=3)+
+  ylab("Raw intensity")+
+  xlab("Contact number")+
+  labs(fill = "Gloves")+
+  hrbrthemes::theme_ipsum()
 
 ```
 
@@ -119,29 +125,4 @@ plot(model_fit_g)
 
 
 
-
-
-
-## Kalanne's sequential transfer data
-
-You can also embed plots, for example:
-
-```{r,echo = FALSE}
-
-df<-vroom::vroom("Downloads/ExperimentalData.txt",delim = "\t")
-skimr::skim(df)
-```
-
-
-
-## Model
-
-```{r}
-model_fit<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant),family = lognormal(link = "identity", link_sigma = "log"))
-summary(model_fit)
-
-model_fit_g<-brms::brm(data = df,log10CFU~1+NumberContacts+Gloves+ (1|Participant))
-summary(model_fit_g)
-plot(model_fit, variable = c("NumberContacts"))
-```
 
