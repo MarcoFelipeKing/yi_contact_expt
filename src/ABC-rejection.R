@@ -6,7 +6,7 @@
 # The function is defined by the recurrence relation
 # x_{n+1}=x_n-beta*af*x_n-1
 #
-#
+# 7/07/22 - remember that it's surface concentration we're measuring, not finger. So it's the reverse of the formula
 
 #load packages ----------------------------------------------------------------
 pacman::p_load(dplyr, tidyr, ggplot2)
@@ -17,9 +17,9 @@ cf <- parameters[2]
 af <- parameters[3]
 x <- rep(0, 6)
 
-for (i in seq(1, 6)) {
+for (i in seq(1, 6)) { # FIXME define the correct equation- You measure surface intensity in each oval. So you need to predict that - not the finger concentration.
   # x[i + 1] <- cf - beta * x[i] * af
-  x[i + 1] <- x[i]- beta*cf/af*(cf-x[i])
+  # x[i + 1] <- beta*cfx[i]+(cf*af-x[i])
 }
   return(x %>% unlist())
 }
