@@ -17,9 +17,10 @@ cf <- parameters[2]
 af <- parameters[3]
 x <- rep(0, 6)
 
-    for (i in seq(1, 6)) {
-        x[i + 1] <- cf - beta * x[i] * af
-    }
+for (i in seq(1, 6)) {
+  # x[i + 1] <- cf - beta * x[i] * af
+  x[i + 1] <- x[i]- beta*cf/af*(cf-x[i])
+}
   return(x %>% unlist())
 }
 
@@ -32,8 +33,8 @@ filter(gloves=="N") %>%
 group_by(contact_number, surface) %>% 
 summarise(mean_raw_int_d = mean(raw_int_d), sd_raw_int_d = sd(raw_int_d))
 
-#Define Euclidean distance function between gradientModel and experimetnal data divided by the standard deviation of the experimental data ----------------------------------------------------------------
-
+#Define Euclidean distance function between gradientModel and experimental data ----------------------------------------------------------------
+#This is just for plastic,
 distance_data_function <- function(x) {
     y <- dY_grouped %>% filter(surface=="Plastic") %>% select(mean_raw_int_d)%>%as.matrix()
     #drop contact_number column
@@ -51,13 +52,13 @@ distance_data_function <- function(x) {
 }
 
 #Number of simulations ----------------------------------------------------------------
-n <- 1e2
+n <- 1e3
 
 #Define a data.frme of n parameter draws for lam, cs and cf ----------------------------------------------------------------
 parameters <- data.frame(
-beta = runif(n = n, min = 0, max = 1),
-cf = runif(n = n, min = 69977, max = 34516017),
-af = runif(n = n, min = 1.0, max = 2.9)
+beta = runif(n = n, min = 0, max = 1), # transfer efficiency
+cf = runif(n = n, min = 69977, max = 34516017), # surface concentrations
+af = runif(n = n, min = 1.0, max = 2.9) # finger area
 )
 
 
@@ -95,8 +96,8 @@ mutate(contact = rep(0:5,m)) %>%
 select(-name)
 
 # Using ggplot2, plot the first 1000 rows of predictions using a geom_ribbon ----------------------------------------------------------------
-y <- c(0.0, 1.29, 2.22, 2.39, 2.45, 2.09)
-s <- c(0.0, 0.216, 0.521, 0.565, 0.848, 1.04)
+y <- c(0.0, 1.29, 2.22, 2.39, 2.45, 2.09) # plastic mean
+s <- c(0.0, 0.216, 0.521, 0.565, 0.848, 1.04) # plastic st
 
 ribbon_data <- predictions%>%
 group_by(contact) %>%
