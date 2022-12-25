@@ -16,7 +16,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r setup}
-pacman::p_load(dplyr,brms,tidyr,ggplot2)
+pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4)
 
 ```
 
@@ -33,10 +33,13 @@ skimr::skim(dY)
 # Individual powder area vs contact number and loading weight 
 dY %>% 
   filter(surface=="Plastic" ) %>% 
-  filter(id<20) %>% 
+  filter(id<21) %>% 
   ggplot()+
-  geom_point(aes(x=contact_number,y=powder_area,colour=gloves,size=loading_weight))+
+  geom_point(aes(x=contact_number,y=raw_int_d/(powder_area*loading_weight),colour=gloves))+
+  geom_smooth(aes(x=contact_number,y=raw_int_d/(powder_area*loading_weight),colour=gloves),method="lm",se=FALSE)+
+  scale_y_continuous(trans="log10")+
   facet_wrap(~id,scales="free")+
+  scale_colour_brewer(palette = "Set1")+
   hrbrthemes::theme_ipsum()
 
 # Raw int violin plots faceted by surface
@@ -100,6 +103,18 @@ ggsave(a,filename = "images/aggregated_intensity.png",dpi=300, device="png",widt
 
 ```
 
+# LMER4 model fit
+Here we fit a Linear Mixed Effects Model using LMER4 to the data.
+
+```{r LMER4 raw_int_d }
+#Here we fit a LMER4 model from LMER4 to the data, with raw_ind_d as the dependent variable
+#We
+model_fit_g<-lme4::lmer(raw_int_d~powder_area+contact_number+gloves+surface+(powder_area+contact_number+gloves+surface|id),
+                  data = dY)
+summary(model_fit_g)
+plot(model_fit_g)
+
+```
 
 
 # BRMS model fit
@@ -108,10 +123,10 @@ Here we fit a Bayesian Regression Model using BRMS to the data.
 ```{r BRM raw_int_d }
 #Here we fit a BRM model from BRSM to the data, with raw_ind_d as the dependent variable
 #We 
-model_fit_g<-brms::brm(data = dY,raw_int_d~powder_area+contact_number+gloves+surface+(powder_area+contact_number+gloves+surface|id),
+model_fit_BRMS<-brms::brm(data = dY,raw_int_d~powder_area+contact_number+gloves+surface+(powder_area+contact_number+gloves+surface|id),
                        family = lognormal(link = "identity", link_sigma = "log"))
-summary(model_fit_g)
-plot(model_fit_g)
+summary(model_fit_BRMS)
+plot(model_fit_BRMS)
 
 ```
 
