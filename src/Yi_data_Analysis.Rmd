@@ -15,11 +15,11 @@ pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate)
 ```
 
 
-## Fluorescent powder
+# Fluorescent powder
 This imports Yi lui's data and skim the columns using skimr
 
 ```{r Yi's data import}
-dY<-vroom::vroom("data/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
+dY<-vroom::vroom("../data/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
 
 # convert to UK date
 dy<-dY %>% mutate(date=lubridate::mdy(date))
@@ -143,8 +143,9 @@ Here we fit a Linear Mixed Effects Model using LMER4 to the data.
 ```{r LMER4 raw_int_d }
 #Here we fit a LMER4 model from LMER4 to the data, with raw_ind_d as the dependent variable
 #We
-model_fit_g<-lme4::lmer(raw_int_d~powder_area+contact_number+gloves+surface+(powder_area+contact_number+gloves+surface|id),
-                  data = dY)
+model_fit_g<-lme4::lmer(log10(raw_int_d)~powder_area + contact_number + gloves + surface + (powder_area+contact_number+gloves+surface | id),
+                  data = dY,
+                  weights=log10(raw_int_d))
 summary(model_fit_g)
 plot(model_fit_g)
 
@@ -162,16 +163,22 @@ model_fit_BRMS<-brms::brm(data = dY,raw_int_d~powder_area+contact_number+gloves+
 summary(model_fit_BRMS)
 plot(model_fit_BRMS)
 
+model_fit_BRMS
+
 ```
 
+## Calculate Lambda
 
+```{r calculate lambda}
+# Extract the coefficients from the model summary
+coefs <- summary(model_fit_BRMS)$coefficients
 
+# Calculate the transfer efficiency using the coefficients for the predictors
+lambda <- coefs['PowderArea'] / coefs['ContactNumber']
 
+# Print the transfer efficiency
+lambda
 
-
-
-
-
-
+```
 
 
