@@ -25,8 +25,19 @@ dY
 dy<-dY %>% mutate(date=lubridate::mdy(date))
 skimr::skim(dY)
 ```
+## Fix date
+
+Some of the dates are in American format, some are in British format.
+
+```{r}
+dY <- dY %>% separate(date,into = c("a","b","year"),sep = "/") %>% 
+            mutate(date=case_when(a =="07"~paste0(b,"/",a,"/",year),
+                        a !="07"~paste0(a,"/",b,"/",year)),.keep="unused")
+```
+
 
 # Plot the individual intensity/powder area vs contact number for all the surfaces
+
 We think the date has an important contribution to the levels of intensity because the batteries were changed at some point in the UV light.
 
 
@@ -51,25 +62,10 @@ dY %>%
   axis.text.y=element_text(size=14))
 
 ```
-## Fix the dates - 
 
-Some are in American format and others not
 
-```{r fix dates}
+# Plot contacts of first 20
 
-dY %>% 
-  mutate(date=)
-
-# require(Matrix)
-# require(MASS)
-# 
-# A=t(matrix(c(1,1,1,1,2,2,2,4,5),3,3))
-# b=matrix(c(6,9,12))
-# A
-# pracma::rref(cbind(A,b))
-```
-
-#
 ```{r}
 
 # Individual powder area vs contact number and loading weight 
@@ -171,6 +167,57 @@ plot(model_fit_g)
 
 ```
 
+## Gradient of concentration
+
+Let's look at the gradient for each participant. We can normalise every raw intensity value by first contact.
+
+```{r}
+
+dY%>%
+  mutate(experimentID=paste0(id,surface,gloves)) %>% 
+  group_by(experimentID) %>% 
+  mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
+  ggplot()+
+  geom_jitter(aes(x=contact_number,y=rel_int_d),size=1.2,alpha=0.1,width=0.05,height=0)+
+  geom_smooth(aes(x=contact_number,y=rel_int_d,colour=surface),method="lm")+
+  scale_colour_brewer(palette="Set1")+
+  # geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
+  facet_grid(~gloves)+
+  xlab("Contact number")+
+  ylab("Intensity units")+
+  scale_y_continuous(trans = "log10")+
+  theme_bw()+
+  labs(color='Surface')+
+  theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
+
+```
+## By glove size
+
+Same as above but by glove size
+
+```{r}
+dY%>%
+  mutate(experimentID=paste0(id,surface,gloves)) %>% 
+  group_by(experimentID) %>% 
+  mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
+  mutate(gloves=case_when(gloves=="Y"~glove_size_group,
+                          gloves=="N"~"None")) %>% 
+  filter(!is.na(gloves)) %>% 
+  # drop_na() %>% 
+  mutate(gloves=factor(gloves,levels=c("None","Small","Medium","Large"))) %>% 
+  ggplot()+
+  geom_jitter(aes(x=contact_number,y=rel_int_d),size=1.2,alpha=0.1,width=0.05,height=0)+
+  geom_smooth(aes(x=contact_number,y=rel_int_d,colour=surface),method="lm")+
+  scale_colour_brewer(palette="Set1")+
+  # geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
+  facet_grid(~gloves)+
+  xlab("Contact number")+
+  ylab("Intensity units")+
+  scale_y_continuous(trans = "log10")+
+  theme_bw()+
+  labs(color='Surface')+
+  theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
+```
 
 # BRMS model fit
 Here we fit a Bayesian Regression Model using BRMS to the data.
