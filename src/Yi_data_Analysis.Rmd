@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r setup}
-pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate)
+pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate,ggpval)
 
 ```
 
@@ -63,10 +63,17 @@ dY %>%
 
 ```
 
+## Remove last four dates
+
+```{r remove dates of bimodal data}
+dY <- dY %>% 
+  filter(date<"23/07/2019")
+```
+
 
 # Plot contacts of first 20
 
-```{r}
+```{r individual plots}
 
 # Individual powder area vs contact number and loading weight 
 dY %>% 
@@ -110,6 +117,7 @@ dY %>%
 ```
 
 # Some investigative plots
+
 ```{r investigative plots}
 #Plot log10(raw_int_d) vs contact_number for each ID and colour by gloves
 dY%>%
@@ -153,6 +161,35 @@ ggsave(a,filename = "images/aggregated_intensity.png",dpi=300, device="png",widt
 
 ```
 
+
+
+## Violin plots
+
+```{r investigative violin plots}
+
+dY%>%
+  mutate(experimentID=paste0(id,surface,gloves)) %>% 
+  group_by(experimentID) %>% 
+  mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
+  mutate(gloves=case_when(gloves=="Y"~glove_size_group,
+                          gloves=="N"~"None")) %>% 
+  filter(!is.na(gloves)) %>% 
+  # drop_na() %>% 
+  mutate(gloves=factor(gloves,levels=c("None","Small","Medium","Large"))) %>% 
+  ggplot()+
+  geom_violin(aes(x=as.factor(contact_number),y=rel_int_d/loading_weight,fill=surface),draw_quantiles = c(0.25,0.5,.75))+
+  geom_smooth(aes(x=contact_number,y=rel_int_d/loading_weight),color="black",method="lm")+
+  scale_fill_brewer(palette="Set1")+
+  # geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
+  facet_grid(surface~gloves)+
+  xlab("Contact number")+
+  ylab("Relative Intensity units / Loading Weight")+
+  scale_y_continuous(trans = "log10",labels = scales::label_number())+
+  theme_bw()+
+  labs(color='Surface')+
+  theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
+```
+
 # LMER4 model fit
 Here we fit a Linear Mixed Effects Model using LMER4 to the data.
 
@@ -166,6 +203,40 @@ summary(model_fit_g)
 plot(model_fit_g)
 
 ```
+
+
+## Violin plots of glove effect Y/N by surface 
+
+```{r Only first contact - violin plots}
+
+dY%>%
+  mutate(experimentID=paste0(id,surface,gloves)) %>% 
+  group_by(experimentID) %>% 
+  mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
+  # mutate(gloves=case_when(gloves=="Y"~glove_size_group,
+  #                         gloves=="N"~"None")) %>% 
+  filter(!is.na(gloves)) %>% 
+  filter(contact_number=="1") %>% 
+  # drop_na() %>% 
+  # mutate(gloves=factor(gloves,levels=c("None","Small","Medium","Large"))) %>% 
+  ggplot()+
+  geom_violin(aes(x=as.factor(contact_number),y=raw_int_d/powder_area/loading_weight,fill=gloves),draw_quantiles = c(0.25,0.5,.75))+
+  # geom_smooth(aes(x=contact_number,y=raw_int_d/loading_weight),color="black",method="lm")+
+  scale_fill_brewer(palette="Set1")+
+  # geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
+  facet_grid(~surface)+
+  xlab("Contact number")+
+  ylab("Raw Intensity units / Loading Weight")+
+  scale_y_continuous(trans = "log10",labels = scales::label_number())+
+  theme_bw()+
+  labs(color='Surface')+
+  theme(text = element_text(size=14),axis.text.x=element_text(size=14)) ->p
+
+add_pval(ggplot_obj = p)
+
+# Put p-value
+```
+
 
 ## Gradient of concentration
 
@@ -191,11 +262,11 @@ dY%>%
   theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
 
 ```
-## By glove size
+## Relative intensity By glove size
 
-Same as above but by glove size
+Same as above but by glove size (Small, medium and large, no gloves)
 
-```{r}
+```{r rel intensity vs glove size}
 dY%>%
   mutate(experimentID=paste0(id,surface,gloves)) %>% 
   group_by(experimentID) %>% 
@@ -206,17 +277,33 @@ dY%>%
   # drop_na() %>% 
   mutate(gloves=factor(gloves,levels=c("None","Small","Medium","Large"))) %>% 
   ggplot()+
-  geom_jitter(aes(x=contact_number,y=rel_int_d),size=1.2,alpha=0.1,width=0.05,height=0)+
-  geom_smooth(aes(x=contact_number,y=rel_int_d,colour=surface),method="lm")+
+  geom_jitter(aes(x=contact_number,y=rel_int_d/loading_weight),size=1.2,alpha=0.1,width=0.05,height=0)+
+  geom_smooth(aes(x=contact_number,y=rel_int_d/loading_weight,colour=surface),method="lm")+
   scale_colour_brewer(palette="Set1")+
   # geom_smooth(method="lm",se=TRUE,aes(x=contact_number,y=raw_int_d/powder_area,colour=gloves))+
   facet_grid(~gloves)+
   xlab("Contact number")+
-  ylab("Intensity units")+
+  ylab("Relative Intensity units / Loading Weight")+
   scale_y_continuous(trans = "log10")+
   theme_bw()+
   labs(color='Surface')+
   theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
+```
+
+
+
+# LMER4 model fit
+Here we fit a Linear Mixed Effects Model using LMER4 to the data.
+
+```{r LMER4 raw_int_d }
+#Here we fit a LMER4 model from LMER4 to the data, with raw_ind_d as the dependent variable
+#We
+model_fit_g<-lme4::lmer(log10(raw_int_d)~powder_area + contact_number + gloves + surface + (powder_area+contact_number+gloves+surface | id),
+                  data = dY,
+                  weights=log10(raw_int_d))
+summary(model_fit_g)
+plot(model_fit_g)
+
 ```
 
 # BRMS model fit
@@ -234,18 +321,8 @@ model_fit_BRMS
 
 ```
 
-## Calculate Lambda
+## Calculate Lambda - Transfer efficiency 
 
-```{r calculate lambda}
-# Extract the coefficients from the model summary
-coefs <- summary(model_fit_BRMS)$coefficients
 
-# Calculate the transfer efficiency using the coefficients for the predictors
-lambda <- coefs['PowderArea'] / coefs['ContactNumber']
-
-# Print the transfer efficiency
-lambda
-
-```
 
 
