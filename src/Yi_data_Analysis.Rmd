@@ -18,18 +18,18 @@ pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate,ggpval)
 # Fluorescent powder
 This imports Yi lui's data and skim the columns using skimr
 
-```{r Yi's data import}
+```{r Yi's data import, warning=FALSE,echo=FALSE,include=FALSE}
 dY<-vroom::vroom("../data/Yi.data.longformat.20191121_censoring_handled.csv") %>% janitor::clean_names()
-dY
+#dY
 # convert to UK date
-dy<-dY %>% mutate(date=lubridate::mdy(date))
+#dy<-dY %>% mutate(date=lubridate::mdy(date))
 skimr::skim(dY)
 ```
 ## Fix date
 
-Some of the dates are in American format, some are in British format.
+Some of the dates are in American format, some are in British format. Given that the betteries were changed on day 23, this has an effect on the level of raw intensity
 
-```{r}
+```{r fix date, warning=FALSE,echo=FALSE,include=FALSE}
 dY <- dY %>% separate(date,into = c("a","b","year"),sep = "/") %>% 
             mutate(date=case_when(a =="07"~paste0(b,"/",a,"/",year),
                         a !="07"~paste0(a,"/",b,"/",year)),.keep="unused")
@@ -41,27 +41,99 @@ dY <- dY %>% separate(date,into = c("a","b","year"),sep = "/") %>%
 We think the date has an important contribution to the levels of intensity because the batteries were changed at some point in the UV light.
 
 
-```{r rel intensity vs contact number and by date}
+```{r rel intensity vs contact number and by date, warning=FALSE,echo=FALSE,include=FALSE}
 dY %>% 
   filter(gloves=="N") %>% 
+  mutate(date=lubridate::dmy(date)) %>% 
   #filter(surface=="Plastic" ) %>% 
   #filter(id<21) %>% 
   ggplot()+
-  geom_point(aes(x=contact_number,y=raw_int_d/(powder_area),colour=date),alpha=0.1)+
+  geom_point(aes(x=contact_number,y=raw_int_d/(powder_area),name=paste(id,surface),colour=surface),alpha=0.1)+
   #geom_smooth(aes(x=contact_number,y=raw_int_d/(powder_area)),method="lm",se=FALSE)+
   scale_y_continuous(trans="log10",limits=c(3e4,4e5 ))+
   ylab("Intensity/Powder Area")+
   xlab("Contact number")+
-  facet_wrap(~date)+
-  # scale_colour_brewer(palette = "Set1")+
+  facet_wrap(~date,ncol=5)+
+  scale_colour_brewer(palette = "Set1")+
   theme_bw()+
   #labs(color = "Gloves")+
   #font_size(14)
   theme(text = element_text(size=14),
   axis.text.x=element_text(size=14),
-  axis.text.y=element_text(size=14))
+  axis.text.y=element_text(size=14),legend.position = "")#->a
+
+plotly::ggplotly(a)
 
 ```
+
+## Plot of powder Area
+
+```{r rel intensity vs contact number and by date, warning=FALSE,echo=FALSE,include=FALSE}
+dY %>% 
+  filter(gloves=="N") %>% 
+  mutate(date=lubridate::dmy(date)) %>% 
+  #filter(surface=="Plastic" ) %>% 
+  #filter(id<21) %>% 
+  ggplot()+
+  geom_point(aes(x=contact_number,y=(powder_area),name=paste(id,surface),colour=surface),alpha=0.5)+
+  #geom_smooth(aes(x=contact_number,y=raw_int_d/(powder_area)),method="lm",se=FALSE)+
+  # scale_y_continuous(trans="log10",limits=c(3e4,4e5 ))+
+  ylab("Powder Area [mm]")+
+  xlab("Contact number")+
+  facet_wrap(~date,ncol=5)+
+  scale_colour_brewer(palette = "Set1")+
+  theme_bw()+
+  #labs(color = "Gloves")+
+  #font_size(14)
+  theme(text = element_text(size=14),
+  axis.text.x=element_text(size=14),
+  axis.text.y=element_text(size=14),legend.position = "")#->a
+
+plotly::ggplotly(a)
+
+```
+
+## Plot of Loading Weight vs contact number
+
+We fit a quadratic regression to the loading weight vs contact number for each date. Visually it appears that the loading weight increases over time but it seems that this is not true.
+
+```{r rel loading weight by date, warning=FALSE,echo=FALSE,include=FALSE}
+dY %>% 
+  filter(gloves=="N") %>% 
+  mutate(date=lubridate::dmy(date)) %>% 
+  #filter(surface=="Plastic" ) %>% 
+  #filter(id<21) %>% 
+  ggplot()+
+  geom_point(aes(x=contact_number,y=loading_weight,name=paste(id,surface),colour=surface),alpha=0.5)+
+  geom_smooth(aes(x=contact_number,y=(powder_area)),method="lm",se=FALSE,colour="black")+ #,formula="y ~ x + I(x^2)"
+  # scale_y_continuous(trans="log10",limits=c(3e4,4e5 ))+
+  ylab("Loeading weight [g]")+
+  xlab("Contact number")+
+  facet_wrap(~surface,ncol=3)+
+  scale_colour_brewer(palette = "Set1")+
+  theme_bw()+
+  #labs(color = "Gloves")+
+  #font_size(14)
+  theme(text = element_text(size=14),
+  axis.text.x=element_text(size=14),
+  axis.text.y=element_text(size=14),legend.position = "")#->a
+
+plotly::ggplotly(a)
+
+```
+
+We now look at the regression lines quantitatively
+
+```{r lm for loading weight over contacts}
+
+fit_lm <- lm(data=dY,loading_weight~contact_number+surface)
+
+broom::tidy(fit_lm)
+
+# fit_lmer <- lmer(data=dY,loading_weight~contact_number+surface+(1|id))
+# summary(fit_lmer)
+```
+
 
 ## Remove last four dates
 
@@ -116,7 +188,7 @@ dY %>%
 
 ```
 
-# Some investigative plots
+### Plots of plastic per person
 
 ```{r investigative plots}
 #Plot log10(raw_int_d) vs contact_number for each ID and colour by gloves
@@ -163,9 +235,9 @@ ggsave(a,filename = "images/aggregated_intensity.png",dpi=300, device="png",widt
 
 
 
-## Violin plots
+##  Relative Intensity units / Loading Weight
 
-```{r investigative violin plots}
+```{r Relative Intensity units / Loading Weight}
 
 dY%>%
   mutate(experimentID=paste0(id,surface,gloves)) %>% 
@@ -210,6 +282,7 @@ plot(model_fit_g)
 ```{r Only first contact - violin plots}
 
 dY%>%
+  filter(date<"23/07/2019") %>% 
   mutate(experimentID=paste0(id,surface,gloves)) %>% 
   group_by(experimentID) %>% 
   mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
@@ -228,13 +301,21 @@ dY%>%
   xlab("Contact number")+
   ylab("Raw Intensity units / Loading Weight")+
   scale_y_continuous(trans = "log10",labels = scales::label_number())+
+  labs(fill="Gloves worn")+
   theme_bw()+
   labs(color='Surface')+
   theme(text = element_text(size=14),axis.text.x=element_text(size=14)) ->p
 
-add_pval(ggplot_obj = p)
+add_pval(ggplot_obj = p,pairs = list(c(1,2)))
 
+
+S=matrix(c(1,2,4,0,-1,1,2,3,8),3,3)
+S%*%S
 # Put p-value
+pracma::inv(S)
+S
+
+det(S)
 ```
 
 
@@ -242,7 +323,7 @@ add_pval(ggplot_obj = p)
 
 Let's look at the gradient for each participant. We can normalise every raw intensity value by first contact.
 
-```{r}
+```{r gradient of concentration: raw_int_d/first(raw_int_d)}
 
 dY%>%
   mutate(experimentID=paste0(id,surface,gloves)) %>% 
@@ -262,6 +343,8 @@ dY%>%
   theme(text = element_text(size=14),axis.text.x=element_text(size=14)) 
 
 ```
+
+
 ## Relative intensity By glove size
 
 Same as above but by glove size (Small, medium and large, no gloves)
@@ -321,7 +404,6 @@ model_fit_BRMS
 
 ```
 
-## Calculate Lambda - Transfer efficiency 
 
 
 
