@@ -7,7 +7,7 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate,ggpval)
+pacman::p_load(dplyr,brms,tidyr,ggplot2,lme4,lubridate,rstatix)
 ```
 
 
@@ -268,14 +268,19 @@ Here we fit a Linear Mixed Effects Model using LMER4 to the data.
 #Here we fit a LMER4 model from LMER4 to the data, with raw_ind_d as the dependent variable
 #We
 
+#TODO 13th March
+#
 data <- dY%>%
   mutate(experimentID=paste0(id,surface,gloves)) %>% 
   group_by(experimentID) %>% 
-  mutate(rel_int_d=raw_int_d/first(raw_int_d)) 
+  mutate(rel_int_d=raw_int_d/first(raw_int_d)) %>% 
+  mutate(gloves=case_when(gloves=="Y"~glove_size_group,
+                          gloves=="N"~"None")) 
 
 model_fit_g<-lme4::lmer(rel_int_d~powder_area + contact_number + gloves + surface + loading_weight+(powder_area+contact_number+gloves+surface | id),
                   data = data,
-                  weights=log10(raw_int_d))
+                  weights=rel_int_d)#,
+                  # weights=log10(raw_int_d)
 summary(model_fit_g)
 plot(model_fit_g)
 
